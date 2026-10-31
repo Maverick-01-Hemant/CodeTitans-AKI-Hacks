@@ -111,4 +111,7 @@ the scan counts as a blink and is valid for 8 seconds.
 
 ## Team
 
-**CodeTitans**: add your names here.
+**CodeTitans**: 
+**Leader**: Hemant Kumar
+**CO-Leader**: Aditya Thakur
+**CO-Leader2**: Komal Saha.
