@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ app_name }} · Smart Attendance</title>
+<style>
+  :root{
+    --bg:#090c18;--card:#121730;--card2:#0d1126;--line:#262d52;
+    --text:#e9ecf8;--muted:#8d95bb;
+    --gold:#ffb020;--gold2:#ff8a00;--blue:#5b8cff;
+    --ok:#3ddc97;--warn:#ffc233;--bad:#ff6b6b;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--text);
+    background:radial-gradient(1200px 600px at 80% -10%,rgba(91,140,255,.15),transparent),
+               radial-gradient(900px 500px at -10% 0%,rgba(255,176,32,.10),transparent),var(--bg)}
+  header{padding:14px 28px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;backdrop-filter:blur(6px)}
+  .brand{display:flex;align-items:center;gap:12px}
+  .brand svg{width:40px;height:40px}
+  .brand h1{margin:0;font-size:22px;letter-spacing:.3px}
+  .brand h1 b{background:linear-gradient(90deg,var(--gold),var(--gold2));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .brand small{display:block;color:var(--muted);font-size:12px;margin-top:1px}
+  nav{display:flex;gap:8px}
+  nav button{background:transparent;border:1px solid var(--line);color:var(--muted);padding:8px 16px;border-radius:10px;cursor:pointer;font-size:14px;transition:.15s}
+  nav button:hover{color:var(--text);border-color:var(--gold)}
+  nav button.active{background:linear-gradient(90deg,var(--gold),var(--gold2));color:#1a1200;border-color:transparent;font-weight:700}
+
+  .wrap{max-width:1180px;margin:22px auto;padding:0 16px}
+  .stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:18px}
+  @media(max-width:760px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px}
+  .stat span{display:block;color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.6px}
+  .stat b{display:block;font-size:28px;margin-top:4px}
+  .stat b.g{color:var(--ok)} .stat b.y{color:var(--warn)} .stat b.r{color:var(--bad)} .stat b.b{color:var(--blue)}
+
+  main{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:18px}
+  @media(max-width:880px){main{grid-template-columns:1fr}}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px}
+  .card h2{margin:0 0 12px;font-size:16px}
+  .vw{position:relative;width:100%;aspect-ratio:4/3;background:#000;border-radius:12px;overflow:hidden;border:1px solid var(--line)}
+  video,#overlay{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transform:scaleX(-1)}
+  .legend{display:flex;gap:12px;flex-wrap:wrap;margin-top:10px;font-size:12px;color:var(--muted)}
+  .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px}
+  .status{margin-top:8px;font-size:13px;color:var(--muted);min-height:18px}
+
+  input[type=text],input[type=date],input[type=time],input[type=search]{padding:10px 12px;background:var(--card2);border:1px solid var(--line);border-radius:10px;color:var(--text);font-size:14px;margin-bottom:10px;width:100%}
+  input:focus{outline:none;border-color:var(--gold)}
+  .btn{background:linear-gradient(90deg,var(--gold),var(--gold2));color:#1a1200;border:0;padding:10px 16px;border-radius:10px;cursor:pointer;font-size:14px;font-weight:700}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  .btn.ghost{background:transparent;border:1px solid var(--line);color:var(--text);font-weight:500}
+  .btn.sm{padding:4px 10px;font-size:12px;border-radius:8px}
+  .btn.danger{background:transparent;border:1px solid var(--bad);color:var(--bad);padding:4px 10px;font-size:12px;border-radius:8px;font-weight:500}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .row .grow{flex:1;min-width:120px;margin:0}
+  .switch{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);margin:2px 0 12px;cursor:pointer}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th,td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--line)}
+  th{color:var(--muted);font-weight:500;font-size:12px;text-transform:uppercase}
+  .pill{display:inline-block;padding:2px 9px;border-radius:99px;font-size:12px;font-weight:600}
+  .pill.present{background:rgba(61,220,151,.15);color:var(--ok)}
+  .pill.late{background:rgba(255,194,51,.15);color:var(--warn)}
+  .pill.absent{background:rgba(255,107,107,.15);color:var(--bad)}
+  .tag{font-size:11px;color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:1px 6px;margin-left:6px}
+  .hidden{display:none}
+  .hint{font-size:12px;color:var(--muted);margin-top:8px;line-height:1.5}
+  .consent{display:flex;gap:10px;align-items:flex-start;font-size:13px;margin:4px 0 12px;line-height:1.45;color:var(--muted)}
+  .scroll{max-height:300px;overflow:auto}
+  .chart{display:flex;align-items:flex-end;gap:10px;height:120px;margin:6px 0 14px;padding:8px 6px 0;border:1px solid var(--line);border-radius:12px;background:var(--card2)}
+  .bar{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%;font-size:11px;color:var(--muted)}
+  .bar i{display:block;width:70%;min-height:3px;border-radius:6px 6px 0 0;background:linear-gradient(180deg,var(--gold),var(--gold2));margin-bottom:4px}
+  .bar em{font-style:normal;color:var(--text);font-size:11px;margin-bottom:2px}
+  .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--ok);color:#06241a;padding:10px 18px;border-radius:12px;font-weight:700;opacity:0;transition:opacity .25s;pointer-events:none;z-index:9;max-width:90vw}
+  .toast.err{background:var(--bad);color:#2a0606}
+  .toast.show{opacity:1}
+  footer{text-align:center;color:var(--muted);font-size:12px;padding:22px 0 30px}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <svg viewBox="0 0 48 48" aria-hidden="true">
+      <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffb020"/><stop offset="1" stop-color="#ff8a00"/></linearGradient></defs>
+      <path d="M24 3 43 14v20L24 45 5 34V14z" fill="#121730" stroke="url(#g)" stroke-width="2.5"/>
+      <path d="M16 19h16M16 24h16M16 29h10" stroke="url(#g)" stroke-width="2.5" stroke-linecap="round"/>
+    </svg>
+    <div><h1>Code<b>Titans</b></h1><small>Smart face-recognition attendance</small></div>
+  </div>
+  <nav>
+    <button id="tab-attend" class="active">Take Attendance</button>
+    <button id="tab-register">Register</button>
+    <button id="tab-records">Records</button>
+  </nav>
+</header>
+
+<div class="wrap">
+  <section class="stats">
+    <div class="stat"><span>Registered</span><b class="b" id="sReg">0</b></div>
+    <div class="stat"><span>Present today</span><b class="g" id="sPres">0</b></div>
+    <div class="stat"><span>Late / Absent</span><b><span class="y" id="sLate">0</span> / <span class="r" id="sAbs">0</span></b></div>
+    <div class="stat"><span>Attendance today</span><b id="sPct">0%</b></div>
+  </section>
+
+  <main>
+    <section class="card" id="camCard">
+      <h2 id="camTitle">Live Camera</h2>
+      <div class="vw">
+        <video id="video" autoplay muted playsinline></video>
+        <canvas id="overlay" width="400" height="300"></canvas>
+      </div>
+      <canvas id="grab" width="400" height="300" class="hidden"></canvas>
+      <div class="legend">
+        <span><i class="dot" style="background:var(--ok)"></i>Marked present</span>
+        <span><i class="dot" style="background:var(--warn)"></i>Verifying / blink needed</span>
+        <span><i class="dot" style="background:var(--bad)"></i>Unknown</span>
+      </div>
+      <div class="status" id="status">Starting camera…</div>
+    </section>
+
+    <section>
+      <!-- Attendance -->
+      <div class="card" id="p-attend">
+        <h2>Today <span id="day" style="color:var(--muted);font-weight:400"></span></h2>
+        <div class="row" style="margin-bottom:10px">
+          <button class="btn" id="startBtn">Start scanning</button>
+          <button class="btn ghost" id="stopBtn" disabled>Stop</button>
+        </div>
+        <label class="switch"><input type="checkbox" id="liveness" checked>
+          Liveness check: blink once to be marked (blocks photo spoofing)</label>
+        <div class="row" style="margin-bottom:6px">
+          <span style="font-size:13px;color:var(--muted)">Late after</span>
+          <input type="time" id="lateAfter" class="grow" style="max-width:130px">
+          <button class="btn ghost sm" id="saveLate">Save</button>
+        </div>
+        <div class="scroll">
+          <table><thead><tr><th>ID</th><th>Name</th><th>Time</th></tr></thead><tbody id="todayBody"></tbody></table>
+        </div>
+      </div>
+
+      <!-- Register -->
+      <div class="card hidden" id="p-register">
+        <h2>Register a person</h2>
+        <input type="text" id="rid" placeholder="Roll no. / ID" maxlength="32">
+        <input type="text" id="rname" placeholder="Full name" maxlength="80">
+        <label class="consent"><input type="checkbox" id="consent">
+          <span>I consent to my face being scanned for attendance. Only a numeric face template is stored (no photos), on this computer only, and I can ask for it to be deleted at any time.</span>
+        </label>
+        <button class="btn" id="capBtn">Capture &amp; register</button>
+        <div class="hint">Face the camera in good light, one person in frame. 5 quick snapshots are taken.</div>
+        <h2 style="margin-top:18px">Registered (<span id="cnt">0</span>)</h2>
+        <div class="scroll">
+          <table><thead><tr><th>ID</th><th>Name</th><th>Attendance</th><th></th></tr></thead><tbody id="peopleBody"></tbody></table>
+        </div>
+      </div>
+
+      <!-- Records -->
+      <div class="card hidden" id="p-records">
+        <h2>Records</h2>
+        <div class="chart" id="chart"></div>
+        <div class="row" style="margin-bottom:10px">
+          <input type="date" id="rdate" class="grow" style="max-width:160px">
+          <input type="search" id="rsearch" class="grow" placeholder="Search name / ID">
+        </div>
+        <div class="row" style="margin-bottom:10px">
+          <button class="btn sm" id="csvBtn">Export day CSV</button>
+          <button class="btn ghost sm" id="csvAllBtn">Export all days</button>
+        </div>
+        <div class="scroll">
+          <table><thead><tr><th>ID</th><th>Name</th><th>Status</th><th>Time</th><th></th></tr></thead><tbody id="recBody"></tbody></table>
+        </div>
+        <div style="margin-top:14px"><button class="btn danger" id="wipeBtn">Delete ALL data</button></div>
+      </div>
+    </section>
+  </main>
+</div>
+<footer>© {{ app_name }} · Runs 100% on this computer · No photos stored · Consent-based</footer>
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = id => document.getElementById(id);
+const video = $('video'), overlay = $('overlay'), grab = $('grab'), statusEl = $('status');
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const today = () => new Date().toLocaleDateString('en-CA');
+const api = async (url, opts) => {
+  const r = await fetch(url, opts); let j = {};
+  try { j = await r.json(); } catch {}
+  if (!r.ok) throw new Error(j.error || 'Request failed');
+  return j;
+};
+const post = (url, body) => api(url, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)});
+const snap = () => { grab.getContext('2d').drawImage(video, 0, 0, 400, 300); return grab.toDataURL('image/jpeg', 0.75); };
+let toastTimer;
+const toast = (m, err) => { const t = $('toast'); t.textContent = m; t.classList.toggle('err', !!err); t.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 2400); };
+let actx;
+const beep = () => { try { actx = actx || new (window.AudioContext || window.webkitAudioContext)(); const o = actx.createOscillator(), g = actx.createGain(); o.connect(g); g.connect(actx.destination); o.frequency.value = 880; g.gain.value = 0.05; o.start(); o.stop(actx.currentTime + 0.12); } catch {} };
+
+// ---------- camera ----------
+(async () => {
+  try {
+    video.srcObject = await navigator.mediaDevices.getUserMedia({video:{width:640, height:480, facingMode:'user'}});
+    statusEl.textContent = 'Camera ready.';
+  } catch (e) { statusEl.textContent = 'Camera error: ' + e.message + ' (open via http://127.0.0.1:5000)'; }
+})();
+
+// ---------- scanning ----------
+let scanning = false, frames = 0, t0 = 0;
+const COLORS = {marked:'#3ddc97', detecting:'#ffc233', blink:'#ffc233', unknown:'#ff6b6b'};
+function draw(r) {
+  const ctx = overlay.getContext('2d');
+  ctx.clearRect(0, 0, 400, 300);
+  const sx = 400 / r.width, sy = 300 / r.height;
+  for (const f of r.faces) {
+    const [x, y, w, h] = f.box, col = COLORS[f.state] || '#ff6b6b';
+    ctx.strokeStyle = col; ctx.lineWidth = 3; ctx.strokeRect(x*sx, y*sy, w*sx, h*sy);
+    let label = f.name;
+    if (f.state === 'marked') label += ' ✓';
+    if (f.state === 'blink') label += ' · blink to verify';
+    if (f.state === 'detecting') label += ' …';
+    ctx.save(); ctx.translate((x + w) * sx, y * sy - 8); ctx.scale(-1, 1);
+    ctx.fillStyle = col; ctx.font = 'bold 16px sans-serif'; ctx.fillText(label, 0, 0); ctx.restore();
+  }
+}
+async function loop() {
+  if (!scanning) return;
+  try {
+    const r = await post('/api/recognize', {image: snap(), liveness: $('liveness').checked});
+    draw(r);
+    if (r.new_marks.length) { beep(); toast('✓ ' + r.new_marks.map(m => m.name).join(', ') + ' marked present'); refreshAll(); }
+    frames++;
+    const secs = (performance.now() - t0) / 1000;
+    statusEl.textContent = `Scanning… ${(frames / secs).toFixed(1)} fps · ${r.faces.length} face(s)`;
+  } catch (e) { statusEl.textContent = 'Error: ' + e.message; await sleep(1000); }
+  setTimeout(loop, 60);
+}
+$('startBtn').onclick = () => { scanning = true; frames = 0; t0 = performance.now(); $('startBtn').disabled = true; $('stopBtn').disabled = false; loop(); };
+function stopScan() { scanning = false; $('startBtn').disabled = false; $('stopBtn').disabled = true; overlay.getContext('2d').clearRect(0, 0, 400, 300); statusEl.textContent = 'Stopped.'; }
+$('stopBtn').onclick = stopScan;
+
+// ---------- today / stats ----------
+async function loadStats() {
+  const s = await api('/api/stats');
+  $('sReg').textContent = s.registered; $('sPres').textContent = s.present;
+  $('sLate').textContent = s.late; $('sAbs').textContent = s.absent; $('sPct').textContent = s.percent + '%';
+  if (document.activeElement !== $('lateAfter')) $('lateAfter').value = s.late_after || '';
+  const max = Math.max(1, s.registered, ...s.last7.map(d => d.present));
+  $('chart').innerHTML = s.last7.map(d =>
+    `<div class="bar"><em>${d.present}</em><i style="height:${Math.round(d.present / max * 80)}px"></i>${esc(d.label)}</div>`).join('');
+}
+async function loadToday() {
+  $('day').textContent = '· ' + today();
+  const rows = (await api('/api/records?date=' + today())).filter(r => r.status !== 'absent');
+  $('todayBody').innerHTML = rows.map(r =>
+    `<tr><td>${esc(r.id)}</td><td>${esc(r.name)}</td><td>${esc(r.time)} ${r.status === 'late' ? '<span class="pill late">Late</span>' : ''}</td></tr>`).join('')
+    || '<tr><td colspan="3" style="color:var(--muted)">No one marked yet.</td></tr>';
+}
+$('saveLate').onclick = async () => {
+  try { await post('/api/settings', {late_after: $('lateAfter').value}); toast('Saved'); refreshAll(); }
+  catch (e) { toast(e.message, true); }
+};
+const refreshAll = () => Promise.all([loadStats(), loadToday(), loadRecords()]).catch(() => {});
+
+// ---------- register ----------
+$('capBtn').onclick = async () => {
+  if (!$('consent').checked) return toast('Consent is required', true);
+  $('capBtn').disabled = true;
+  try {
+    const imgs = [];
+    for (let i = 0; i < 5; i++) { statusEl.textContent = `Capturing ${i + 1}/5…`; imgs.push(snap()); await sleep(450); }
+    statusEl.textContent = 'Processing…';
+    await post('/api/register', {id: $('rid').value, name: $('rname').value, consent: true, images: imgs});
+    toast('Registered ✓'); $('rid').value = ''; $('rname').value = ''; $('consent').checked = false;
+    statusEl.textContent = 'Camera ready.'; loadPeople(); loadStats();
+  } catch (e) { statusEl.textContent = e.message; toast(e.message, true); }
+  $('capBtn').disabled = false;
+};
+async function loadPeople() {
+  const p = await api('/api/people'); $('cnt').textContent = p.length;
+  $('peopleBody').innerHTML = p.map(x =>
+    `<tr><td>${esc(x.id)}</td><td>${esc(x.name)}<div style="font-size:11px;color:var(--muted)">consent ${esc((x.consent_at || '').replace('T', ' '))}</div></td>
+     <td>${x.percent}% <span class="tag">${x.days} day(s)</span></td>
+     <td style="text-align:right"><button class="btn danger" data-del="${esc(x.id)}">Delete</button></td></tr>`).join('')
+    || '<tr><td colspan="4" style="color:var(--muted)">No one yet.</td></tr>';
+}
+$('peopleBody').onclick = async e => {
+  const id = e.target.dataset.del; if (!id || !confirm('Delete this person and ALL their data?')) return;
+  await api('/api/people/' + encodeURIComponent(id), {method:'DELETE'}); toast('Deleted'); loadPeople(); refreshAll();
+};
+
+// ---------- records ----------
+let recRows = [];
+async function loadRecords() {
+  recRows = await api('/api/records?date=' + ($('rdate').value || today()));
+  renderRecords();
+}
+function renderRecords() {
+  const q = $('rsearch').value.trim().toLowerCase();
+  const rows = recRows.filter(r => !q || r.name.toLowerCase().includes(q) || r.id.toLowerCase().includes(q));
+  $('recBody').innerHTML = rows.map(r => {
+    const act = r.status === 'absent'
+      ? `<button class="btn ghost sm" data-mark="${esc(r.id)}">Mark</button>`
+      : `<button class="btn ghost sm" data-undo="${esc(r.id)}">Undo</button>`;
+    return `<tr><td>${esc(r.id)}</td><td>${esc(r.name)}</td>
+      <td><span class="pill ${r.status}">${r.status[0].toUpperCase() + r.status.slice(1)}</span>${r.method === 'manual' ? '<span class="tag">manual</span>' : ''}</td>
+      <td>${r.time ? esc(r.time) : '-'}</td><td style="text-align:right">${act}</td></tr>`;
+  }).join('') || '<tr><td colspan="5" style="color:var(--muted)">No matching people.</td></tr>';
+}
+$('rdate').onchange = loadRecords; $('rsearch').oninput = renderRecords;
+$('recBody').onclick = async e => {
+  const date = $('rdate').value || today();
+  try {
+    if (e.target.dataset.mark) { await post('/api/manual', {id: e.target.dataset.mark, date}); toast('Marked present (manual)'); refreshAll(); }
+    if (e.target.dataset.undo) { await api(`/api/attendance/${encodeURIComponent(e.target.dataset.undo)}?date=${date}`, {method:'DELETE'}); toast('Attendance removed'); refreshAll(); }
+  } catch (err) { toast(err.message, true); }
+};
+$('csvBtn').onclick = () => { location.href = '/api/export.csv?date=' + ($('rdate').value || today()); };
+$('csvAllBtn').onclick = () => { location.href = '/api/export.csv?all=1'; };
+$('wipeBtn').onclick = async () => {
+  if (!confirm('Delete ALL registered faces and attendance data? This cannot be undone.')) return;
+  await api('/api/wipe', {method:'POST'}); toast('All data deleted'); loadPeople(); refreshAll();
+};
+
+// ---------- tabs ----------
+function tab(m) {
+  if (m !== 'attend' && scanning) stopScan();
+  for (const k of ['attend', 'register', 'records']) { $('tab-' + k).classList.toggle('active', k === m); $('p-' + k).classList.toggle('hidden', k !== m); }
+  $('camCard').classList.toggle('hidden', m === 'records');
+  $('camTitle').textContent = m === 'register' ? 'Register: look at the camera' : 'Live Camera';
+  if (m === 'records') { $('rdate').value ||= today(); loadRecords(); loadStats(); }
+  if (m === 'register') loadPeople();
+}
+['attend', 'register', 'records'].forEach(k => $('tab-' + k).onclick = () => tab(k));
+$('rdate').value = today();
+refreshAll();
+</script>
+</body>
+</html>

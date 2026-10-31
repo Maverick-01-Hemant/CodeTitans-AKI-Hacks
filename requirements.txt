@@ -1,0 +1,7 @@
+flask
+numpy
+pillow
+dlib-bin
+face_recognition
+face_recognition_models
+setuptools<81
